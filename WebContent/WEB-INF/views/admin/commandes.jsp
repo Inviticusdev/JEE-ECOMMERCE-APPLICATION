@@ -6,7 +6,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Commandes</title>
+    <title>Orders</title>
     <link rel="stylesheet" href="css/bootstrap.min.css"/>
     <link rel="stylesheet" href="css/style-admin.css"/>
 </head>
@@ -16,50 +16,62 @@
     <sql:setDataSource dataSource="jdbc/e_commerce"/>
 
     <c:if test="${param.id != null && param.id.matches('[0-9]+')}">
-    	<sql:update>DELETE FROM commandes WHERE id = ?
-    		<sql:param>${param.id }</sql:param>
-    	</sql:update>
+        <!-- Add a confirmation prompt for order deletion -->
+        <c:choose>
+            <c:when test="${param.confirm == 'yes'}">
+                <sql:update>DELETE FROM commandes WHERE id = ?
+                    <sql:param>${param.id }</sql:param>
+                </sql:update>
+            </c:when>
+            <c:otherwise>
+                <!-- Display a confirmation message or link -->
+                <!-- Implement a confirmation mechanism here -->
+            </c:otherwise>
+        </c:choose>
     </c:if>
 
-    <section id="articles" class="py-5  bg-faded">
-	   <div class="container table-container">
-	       <div class="row">
-	       		<h4 class="display-4 mb-4">List des commandes</h4>
-	       		<div class="col-12 table-responsive-lg">
-		           <table class="table table-striped">
-		               <thead>
-		               <tr>
-		                   <th scope="col">#</th>
-		                   <th scope="col">Client</th>
-		                   <th scope="col">Date</th>
-		                   <th scope="col">Quantite</th>
-		                   <th scope="col">Prix total</th>
-		                   <th scope="col"></th>
-		               </tr>
-		               </thead>
-		               <tbody>
-		               <sql:query var="commandes">
-		               		SELECT cm.id, CONCAT(nom, ' ', prenom) client, dateCommande, SUM(quantite) quantite, SUM(quantite * prix) prixTotal
-							FROM commandes cm, articles a, clients cl, lignesCommande lc 
-							WHERE cm.client = cl.id AND cm.id = lc.commande AND lc.article = a.id
-							GROUP BY cm.id, dateCommande, nom, prenom
-						 	ORDER BY id DESC
-						</sql:query>
-		               <c:forEach var="commande" items="${commandes.rows }">
-		               	<tr>
-		               		<th scope="row">${commande.id }</th>
-		               		<td>${commande.client }</td>
-		               		<td><fmt:formatDate value="${commande.dateCommande }" type="both" dateStyle="short" timeStyle="short"/></td>
-		               		<td>${commande.quantite }</td>
-		               		<td>${commande.prixTotal }</td>
-		               		<td><a class="card-link" href="Commandes?id=${commande.id }">supprimer</a></td>
-	               		</tr>
-		               </c:forEach>
-		               </tbody>
-		           </table>
-	       		</div>
-	       </div>
-	   </div>
+    <section id="orders" class="py-5 bg-faded">
+        <div class="container table-container">
+            <div class="row">
+                <h4 class="display-4 mb-4">List of Orders</h4>
+                <div class="col-12 table-responsive-lg">
+                    <table class="table table-striped">
+                        <thead>
+                        <tr>
+                            <th scope="col">#</th>
+                            <th scope="col">Client</th>
+                            <th scope="col">Date</th>
+                            <th scope="col">Quantity</th>
+                            <th scope="col">Total Price</th>
+                            <th scope="col"></th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <sql:query var="orders">
+                            SELECT cm.id, CONCAT(cl.first_name, ' ', cl.last_name) as client, cm.order_date, 
+                                   SUM(lc.quantity) as quantity, SUM(lc.quantity * a.price) as total_price
+                            FROM orders cm
+                            JOIN clients cl ON cm.client_id = cl.id
+                            JOIN order_items lc ON cm.id = lc.order_id
+                            JOIN products a ON lc.product_id = a.id
+                            GROUP BY cm.id, cm.order_date, cl.first_name, cl.last_name
+                            ORDER BY cm.id DESC
+                        </sql:query>
+                        <c:forEach var="order" items="${orders.rows}">
+                            <tr>
+                                <th scope="row">${order.id}</th>
+                                <td>${order.client}</td>
+                                <td><fmt:formatDate value="${order.order_date}" type="both" dateStyle="short" timeStyle="short"/></td>
+                                <td>${order.quantity}</td>
+                                <td><fmt:formatNumber value="${order.total_price}" type="currency"/></td>
+                                <td><a class="card-link" href="Commandes?id=${order.id}&confirm=yes">Delete</a></td>
+                            </tr>
+                        </c:forEach>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </section>
 
     <%@ include file="/WEB-INF/fragments/footer.jspf" %>

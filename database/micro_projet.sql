@@ -1,132 +1,149 @@
 CREATE DATABASE e_commerce;
 USE e_commerce;
 
-DROP TABLE clients;
-DROP TABLE fournisseurs;
-DROP TABLE categories;
-DROP TABLE articles;
+-- Dropping existing tables if they exist
+DROP TABLE IF EXISTS order_items;
+DROP TABLE IF EXISTS orders;
+DROP TABLE IF EXISTS products;
+DROP TABLE IF EXISTS categories;
+DROP TABLE IF EXISTS suppliers;
+DROP TABLE IF EXISTS customers;
+DROP TABLE IF EXISTS addresses;
+DROP TABLE IF EXISTS payments;
+DROP TABLE IF EXISTS audit_logs;
 
-CREATE TABLE clients(
-	id INT PRIMARY KEY AUTO_INCREMENT,
-    nom VARCHAR(30) NOT NULL,
-    prenom VARCHAR(30) NOT NULL,
-    email VARCHAR(50)  NOT NULL UNIQUE,
-    motPasse VARCHAR(30) NOT NULL,
-    addresse VARCHAR(50),
-    codePostal INT,
-    ville VARCHAR(15),
-    tele VARCHAR(15)
-);
-
-CREATE TABLE fournisseurs(
-	id INT PRIMARY KEY AUTO_INCREMENT,
-    nom VARCHAR(30) NOT NULL,
-    prenom VARCHAR(30) NOT NULL,
+-- Creating Customers table
+CREATE TABLE customers(
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    first_name VARCHAR(30) NOT NULL,
+    last_name VARCHAR(30) NOT NULL,
     email VARCHAR(50) NOT NULL UNIQUE,
-    motPasse VARCHAR(30) NOT NULL,
-    addresse VARCHAR(50),
-    codePostal INT,
-    ville VARCHAR(15),
-    tele VARCHAR(15)
+    password VARCHAR(30) NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    date_of_birth DATE,
+    phone VARCHAR(15)
 );
 
+-- Creating Suppliers table
+CREATE TABLE suppliers(
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(30) NOT NULL,
+    contact_name VARCHAR(30),
+    email VARCHAR(50) NOT NULL UNIQUE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    phone VARCHAR(15)
+);
+
+-- Creating Categories table
 CREATE TABLE categories(
-	id INT PRIMARY KEY AUTO_INCREMENT,
+    id INT AUTO_INCREMENT PRIMARY KEY,
     label VARCHAR(50) NOT NULL
 );
 
-CREATE TABLE articles(
-	id INT PRIMARY KEY AUTO_INCREMENT,
-    titre VARCHAR(50) NOT NULL,
-    prix decimal(12, 2) NOT NULL,
+-- Creating Products table
+CREATE TABLE products(
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(50) NOT NULL,
+    price DECIMAL(12, 2) NOT NULL,
     stock INT NOT NULL,
-    categorie INT NOT NULL,
-    fournisseur INT NOT NULL,
+    category_id INT NOT NULL,
+    supplier_id INT NOT NULL,
     description TEXT,
     photo VARCHAR(200),
-    FOREIGN KEY(categorie) REFERENCES categories(id) ON DELETE CASCADE,
-    FOREIGN KEY(fournisseur) REFERENCES fournisseurs(id) ON DELETE CASCADE
+    status VARCHAR(15) DEFAULT 'active',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY(category_id) REFERENCES categories(id) ON DELETE CASCADE,
+    FOREIGN KEY(supplier_id) REFERENCES suppliers(id) ON DELETE CASCADE
 );
 
-CREATE TABLE commandes(
-	id INT PRIMARY KEY AUTO_INCREMENT,
-    client INT NOT NULL,
-    dateCommande TIMESTAMP,
-    FOREIGN KEY(client) REFERENCES clients(id)
+-- Creating Orders table
+CREATE TABLE orders(
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id INT NOT NULL,
+    order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status VARCHAR(15) DEFAULT 'pending',
+    total_amount DECIMAL(12, 2),
+    updated_at DATETIME ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY(customer_id) REFERENCES customers(id)
 );
 
-ALTER TABLE commandes
-MODIFY dateCommande TIMESTAMP;
-
-CREATE TABLE lignesCommande(
-    commande INT NOT NULL,
-    article INT NOT NULL,
-    quantite INT NOT NULL,
-    PRIMARY KEY(commande, article),
-    FOREIGN KEY(commande) REFERENCES commandes(id) ON DELETE CASCADE,
-    FOREIGN KEY(article) REFERENCES articles(id) ON DELETE CASCADE
+-- Creating Order_Items table
+CREATE TABLE order_items(
+    order_id INT NOT NULL,
+    product_id INT NOT NULL,
+    quantity INT NOT NULL,
+    PRIMARY KEY(order_id, product_id),
+    FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE,
+    FOREIGN KEY(product_id) REFERENCES products(id) ON DELETE CASCADE
 );
 
-SELECT article, quantite FROM lignesCommande WHERE commande = 2;
+-- Creating Addresses table
+CREATE TABLE addresses(
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id INT NOT NULL,
+    address VARCHAR(100),
+    postal_code VARCHAR(10),
+    city VARCHAR(30),
+    phone VARCHAR(15),
+    address_type VARCHAR(15),
+    FOREIGN KEY(customer_id) REFERENCES customers(id)
+);
 
-SELECT a.id, titre, prix, stock, label, description FROM articles a, categories c WHERE categorie = c.id;
+-- Creating Payments table
+CREATE TABLE payments(
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    order_id INT NOT NULL,
+    amount DECIMAL(12, 2),
+    payment_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+    payment_method VARCHAR(30),
+    status VARCHAR(15),
+    FOREIGN KEY(order_id) REFERENCES orders(id)
+);
 
-INSERT INTO fournisseurs(nom, prenom, email, motPasse, addresse, codePostal, ville, tele) VALUES('', '', '', '1234', NULL, NULL, NULL, NULL);
+-- Creating Audit_Logs table
+CREATE TABLE audit_logs(
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    table_name VARCHAR(30),
+    operation VARCHAR(10),
+    operation_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    user_id INT,
+    description TEXT
+);
+-- Inserting sample data into the 'customers' table
+INSERT INTO customers (first_name, last_name, email, password, date_of_birth, phone)
+VALUES 
+('Alice', 'Smith', 'alice.smith@example.com', 'password123', '1990-01-15', '555-0101'),
+('Bob', 'Johnson', 'bob.johnson@example.com', 'password456', '1985-05-20', '555-0102');
 
-INSERT INTO categories(label) VALUES('c1'), ('c2'), ('c3'), ('c4'), ('c5');
+-- Inserting sample data into the 'suppliers' table
+INSERT INTO suppliers (name, contact_name, email, phone)
+VALUES 
+('Cake Supplies Co', 'John Doe', 'johndoe@cakesupplies.com', '555-0201'),
+('Baking Goods Ltd', 'Emily White', 'emilywhite@bakinggoods.com', '555-0202');
 
-INSERT INTO articles(titre, prix, stock, categorie, fournisseur, description, photo) 
-VALUES('Lorem ipsum dolor sit amet consectetur', 150, 12, 1, 1, 'Amet consectetur, adipisicing elit. Dolore sequi quibusdam eius debitis.', ''),
-('Voluptatibus quibusdam', 100, 100, 2, 1, 'Consequuntur quis iste quisquam consequatur eum. Excepturi similique quasi eos. Voluptatibus quibusdam ratione ullam itaque. Corporis.', ''),
-('Corporis', 300, 24, 4, 1, 'Iure ab reiciendis assumenda repellat reprehenderit quia possimus.', ''),
-('Excepturi similique', 100, 3, 2, 1, 'blanditiis laudantium enim provident sint perspiciatis fugit voluptatibus eligendi quidem nulla totam.', ''),
-('Praesentium quibusdam', 124, 12, 3, 1, 'ipsum dolor sit amet consectetur adipisicing elit', '');
+-- Inserting sample data into the 'categories' table
+INSERT INTO categories (label)
+VALUES 
+('Cupcakes'),
+('Birthday Cakes'),
+('Wedding Cakes');
 
-INSERT INTO articles(titre, prix, stock, categorie, fournisseur, description, photo) 
-VALUES('Lorem ipsum dolor sit amet consectetur', 150, 12, 1, 1, 'Amet consectetur, adipisicing elit. Dolore sequi quibusdam eius debitis.', '');
+-- Inserting sample data into the 'products' table
+INSERT INTO products (title, price, stock, category_id, supplier_id, description)
+VALUES 
+('Chocolate Cupcake', 2.50, 100, 1, 1, 'Delicious chocolate cupcake with creamy frosting'),
+('Vanilla Birthday Cake', 20.00, 20, 2, 2, 'Classic vanilla cake, perfect for birthdays'),
+('Elegant Wedding Cake', 150.00, 5, 3, 1, 'Three-tier wedding cake with elegant design');
 
-UPDATE categories SET label = 'Electronics' WHERE id = 1;
-UPDATE categories SET label = 'Books' WHERE id = 2;
-UPDATE categories SET label = 'Movies' WHERE id = 3;
-UPDATE categories SET label = 'Software' WHERE id = 4;
-UPDATE categories SET label = 'Sports' WHERE id = 5;
+-- Inserting sample data into the 'orders' table
+INSERT INTO orders (customer_id, total_amount)
+VALUES 
+(1, 25.00),
+(2, 150.00);
 
-DELETE FROM fournisseurs WHERE id = 1;
-DELETE FROM clients WHERE id = 1;
-
-UPDATE articles SET titre = 'Consectetur adipisicing elit', description = 'voluptatibus eligendi quidem nulla totam. Iure ab reiciendis assumenda repellat' WHERE id = 1;
-
-INSERT INTO articles(titre, prix, stock, categorie, fournisseur, description, photo) VALUES(?, ?, ?, ?, ?, ?, ?);
-
-SELECT c.id, label, COUNT(a.id) articles FROM categories c LEFT JOIN articles a ON c.id = a.categorie GROUP BY c.id, label;
-
-INSERT INTO commandes(client, dateCommande) VALUES(1, '2019-3-30');
-INSERT INTO lignesCommande(commande, article, quantite) VALUES(1, 1, 5), (1, 2, 3);
-
-
-Select * from fournisseurs;
-Select * from clients ORDER BY id DESC;
-Select * from categories;
-Select * from commandes;
-DELETE FROM  commandes WHERE id = 4;
-SELECT cm.id, CONCAT(nom, ' ', prenom) client, dateCommande, SUM(quantite) quantite, SUM(quantite * prix)
-FROM commandes cm, articles a, clients cl, lignesCommande lc 
-WHERE cm.client = cl.id AND cm.id = lc.commande AND lc.article = a.id
-GROUP BY cm.id, dateCommande, nom, prenom;
-Select * from articles;
-Select * from lignesCommande;
-
-UPDATE articles SET photo = 'img/articles/article.jpg' WHERE id = 1;
-UPDATE articles SET photo = 'img/articles/article.jpg' WHERE id = 2;
-UPDATE articles SET photo = 'img/articles/article.jpg' WHERE id = 3;
-UPDATE articles SET photo = 'img/articles/article.jpg' WHERE id = 4;
-UPDATE articles SET photo = 'img/articles/article.jpg' WHERE id = 5;
-UPDATE articles SET photo = 'img/articles/article.jpg' WHERE id = 6;
-
-UPDATE articles SET photo = 'img/articles/ar_0.jpg' WHERE id = 8;
-UPDATE articles SET photo = 'img/articles/ar_0.jpg' WHERE id = 9;
-UPDATE articles SET photo = 'img/articles/ar_0.jpg' WHERE id = 10;
-
-SELECT quantite, quantite * prix
-FROM articles a, lignesCommande lc 
-WHERE lc.article = a.id
+-- Inserting sample data into the 'order_items' table
+INSERT INTO order_items (order_id, product_id, quantity)
+VALUES 
+(1, 1, 10), -- 10 Chocolate Cupcakes for Alice
+(2, 3, 1); -- 1 Wedding Cake for Bob
